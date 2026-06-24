@@ -1,0 +1,44 @@
+{
+  "name": "naru-memory",
+  "version": "0.1.0",
+  "description": "Local-first, harness-agnostic memory for AI agents and developer workflows",
+  "license": "MIT",
+  "homepage": "https://github.com/sean35mm/naru-memory#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sean35mm/naru-memory.git",
+    "directory": "apps/cli"
+  },
+  "bugs": "https://github.com/sean35mm/naru-memory/issues",
+  "keywords": ["memory", "ai", "agents", "local-first", "sqlite", "rag", "opencode"],
+  "type": "module",
+  "bin": {
+    "naru": "./dist/index.js"
+  },
+  "files": ["dist", "LICENSE", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "prepack": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trpc/client": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "better-sqlite3": "^12.0.0",
+    "commander": "^12.1.0",
+    "ulid": "^2.3.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@naru/api": "workspace:*",
+    "@naru/core": "workspace:*",
+    "@naru/opencode-adapter": "workspace:*",
+    "@naru/schema": "workspace:*",
+    "@naru/server": "workspace:*",
+    "tsup": "^8.0.0"
+  }
+}

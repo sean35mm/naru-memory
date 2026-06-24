@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+naru.db
+naru.db-*
+.naru-memory/
+.naru/

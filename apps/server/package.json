@@ -1,0 +1,27 @@
+{
+  "name": "@naru/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "naru-server": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@naru/api": "workspace:*",
+    "@naru/core": "workspace:*",
+    "@naru/schema": "workspace:*",
+    "@trpc/server": "^11.0.0"
+  },
+  "devDependencies": {
+    "@trpc/client": "^11.0.0"
+  }
+}
