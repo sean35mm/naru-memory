@@ -8,3 +8,7 @@ naru.db
 naru.db-*
 .naru-memory/
 .naru/
+
+# Local-only design docs (kept on disk, not tracked/published)
+IMPLEMENTATION_PLAN.md
+IMPLEMENTATION_PLAN.html
