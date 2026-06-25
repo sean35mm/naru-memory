@@ -43,12 +43,13 @@ describe('naru opencode (plan §17.6)', () => {
     const installData = installEnv.data as { changed: boolean; configPath: string }
     expect(installData.changed).toBe(true)
 
-    // The config was written with the marked, MCP-free plugin entry.
+    // The config was written with the published plugin specifier (the entry
+    // value is its own ownership marker; no side-band key is added).
     const config = JSON.parse(readFileSync(installData.configPath, 'utf8')) as Record<
       string,
       unknown
     >
-    expect(config.plugin).toEqual(['@naru/opencode-adapter'])
+    expect(config.plugin).toEqual(['@narulabs/naru/opencode'])
     expect('mcp' in config).toBe(false)
     // 0600 perms on the created file (plan §17.6).
     expect(statSync(installData.configPath).mode & 0o777).toBe(0o600)

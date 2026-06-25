@@ -19,7 +19,7 @@ trap 'rm -rf "$TMPD" "$PROJ"' EXIT
 
 echo "[pack-smoke] packing…"
 # Take the exact tarball path pnpm reports (robust against multiple .tgz files).
-TGZ="$(pnpm --filter naru-memory pack --pack-destination "$TMPD" | grep -oE '/[^ ]*\.tgz$' | tail -n 1)"
+TGZ="$(pnpm --filter @narulabs/naru pack --pack-destination "$TMPD" | grep -oE '/[^ ]*\.tgz$' | tail -n 1)"
 if [ -z "$TGZ" ] || [ ! -f "$TGZ" ]; then
   echo "[pack-smoke] FAILED — could not locate packed tarball" >&2
   exit 1

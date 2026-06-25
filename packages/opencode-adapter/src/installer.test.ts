@@ -2,22 +2,19 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import {
-  NARU_PLUGIN_ID,
-  OPENCODE_CONFIG_FILENAME,
-  OWNERSHIP_KEY,
-  install,
-  uninstall,
-} from './installer'
+import { NARU_PLUGIN_SPECIFIER, OPENCODE_CONFIG_FILENAME, install, uninstall } from './installer'
 
 /**
- * OpenCode adapter installer/uninstaller smoke tests (plan §17.6, §21.5).
+ * OpenCode adapter installer/uninstaller tests (plan §17.6, §21.5).
  *
- * Every case targets a mktemp config dir so a real `~/.config` is never
- * touched. They assert the safety contract: a marked, MCP-free plugin entry;
- * idempotent install (one owned entry on re-run); unrelated user config keys
- * preserved across BOTH install and uninstall; uninstall removes only owned
- * entries; uninstall on a clean dir is a no-op; and dry-run writes nothing.
+ * The installer edits the REAL OpenCode config (`opencode.json`, top-level
+ * `plugin: string[]`). The plugin ENTRY VALUE is its own ownership marker — no
+ * side-band key (e.g. `_naruManaged`) is ever written, since OpenCode validates
+ * its config and may reject unknown keys. Every case targets a mktemp config dir
+ * so a real `~/.config` is never touched and asserts the contract: the specifier
+ * is added to `plugin[]`; unrelated keys + plugin entries are preserved across
+ * both install and uninstall; install is idempotent; uninstall removes only our
+ * entry and is a no-op on a clean config; and dry-run writes nothing.
  */
 
 let configDir: string
@@ -51,7 +48,7 @@ afterEach(() => {
 })
 
 describe('install (plan §17.6)', () => {
-  it('writes a marked, MCP-free plugin entry into a fresh config dir', () => {
+  it('adds the published specifier to plugin[] in a fresh config dir', () => {
     const result = install({ configDir })
 
     expect(result.changed).toBe(true)
@@ -59,16 +56,19 @@ describe('install (plan §17.6)', () => {
     expect(result.configPath).toBe(configPath())
 
     const config = readConfig()
-    // The plugin is registered.
-    expect(config.plugin).toEqual([NARU_PLUGIN_ID])
-    // Ownership is marked so uninstall can be surgical.
-    expect(config[OWNERSHIP_KEY]).toEqual({
-      managed: true,
-      by: NARU_PLUGIN_ID,
-      plugins: [NARU_PLUGIN_ID],
-    })
+    // The plugin is registered by its published specifier.
+    expect(config.plugin).toEqual([NARU_PLUGIN_SPECIFIER])
+    // No side-band ownership key is written (OpenCode validates its config).
+    expect('_naruManaged' in config).toBe(false)
     // MCP is NEVER enabled by install (plan §17.2/§17.6).
     expect('mcp' in config).toBe(false)
+  })
+
+  it('honors a specifier override (local file path for testing)', () => {
+    const local = '/abs/path/to/opencode-plugin.ts'
+    const result = install({ configDir, specifier: local })
+    expect(result.changed).toBe(true)
+    expect(readConfig().plugin).toEqual([local])
   })
 
   it('creates the config file with restrictive 0600 permissions', () => {
@@ -77,7 +77,7 @@ describe('install (plan §17.6)', () => {
     expect(mode).toBe(0o600)
   })
 
-  it('is idempotent: a second install leaves exactly one owned plugin entry', () => {
+  it('is idempotent: a second install leaves exactly one plugin entry', () => {
     const first = install({ configDir })
     expect(first.changed).toBe(true)
 
@@ -85,12 +85,10 @@ describe('install (plan §17.6)', () => {
     expect(second.changed).toBe(false)
     expect(second.changes).toEqual([])
 
-    const config = readConfig()
-    expect(config.plugin).toEqual([NARU_PLUGIN_ID])
-    expect((config[OWNERSHIP_KEY] as { plugins: string[] }).plugins).toEqual([NARU_PLUGIN_ID])
+    expect(readConfig().plugin).toEqual([NARU_PLUGIN_SPECIFIER])
   })
 
-  it('preserves a pre-existing unrelated user config key and plugin', () => {
+  it('preserves a pre-existing unrelated config key and plugin entry', () => {
     // A user already has config with their own setting and their own plugin.
     writeFileSync(
       configPath(),
@@ -104,9 +102,29 @@ describe('install (plan §17.6)', () => {
     // Unrelated key untouched.
     expect(config.theme).toBe('dark')
     // The user's plugin is preserved; ours is appended.
-    expect(config.plugin).toEqual(['user/their-plugin', NARU_PLUGIN_ID])
-    // Only OUR entry is recorded as owned.
-    expect((config[OWNERSHIP_KEY] as { plugins: string[] }).plugins).toEqual([NARU_PLUGIN_ID])
+    expect(config.plugin).toEqual(['user/their-plugin', NARU_PLUGIN_SPECIFIER])
+  })
+
+  it('preserves non-string (tuple/object-form) plugin entries', () => {
+    // OpenCode's `plugin` schema allows the tuple form `[name, options]` and
+    // object entries; install must not drop them.
+    writeFileSync(
+      configPath(),
+      JSON.stringify(
+        { plugin: ['user/x', ['opencode-bar', { key: 'val' }], { name: 'obj', opts: { a: 1 } }] },
+        null,
+        2,
+      ),
+    )
+
+    install({ configDir })
+
+    expect(readConfig().plugin).toEqual([
+      'user/x',
+      ['opencode-bar', { key: 'val' }],
+      { name: 'obj', opts: { a: 1 } },
+      NARU_PLUGIN_SPECIFIER,
+    ])
   })
 
   it('dry-run writes nothing but reports the plan', () => {
@@ -118,6 +136,45 @@ describe('install (plan §17.6)', () => {
     expect(configExists()).toBe(false)
   })
 
+  it('installs into a JSONC config (comments + trailing commas) OpenCode accepts', () => {
+    // OpenCode reads opencode.json as JSONC; a strict JSON.parse would wrongly
+    // abort install on this perfectly-loadable config. The // and trailing
+    // commas (incl. inside the array) and the comment-like text inside a string
+    // value must all be handled.
+    writeFileSync(
+      configPath(),
+      [
+        '{',
+        '  // user theme',
+        '  "theme": "dark",',
+        '  "note": "http://example.com // not a comment",',
+        '  /* their plugins */',
+        '  "plugin": [',
+        '    "user/their-plugin", // keep this',
+        '  ],',
+        '}',
+        '',
+      ].join('\n'),
+    )
+
+    const result = install({ configDir })
+    expect(result.changed).toBe(true)
+
+    const config = readConfig()
+    // String contents (including the `//` inside a value) survive untouched.
+    expect(config.theme).toBe('dark')
+    expect(config.note).toBe('http://example.com // not a comment')
+    // The user's plugin is preserved and ours is appended.
+    expect(config.plugin).toEqual(['user/their-plugin', NARU_PLUGIN_SPECIFIER])
+  })
+
+  it('still refuses a genuinely malformed config', () => {
+    writeFileSync(configPath(), '{ "plugin": [ "x" ')
+    expect(() => install({ configDir })).toThrow(/not valid JSON or JSONC/)
+    // Nothing was overwritten.
+    expect(readFileSync(configPath(), 'utf8')).toBe('{ "plugin": [ "x" ')
+  })
+
   it('echoes back projectDir when provided', () => {
     const result = install({ configDir, projectDir: '/tmp/some-project' })
     expect(result.projectDir).toBe('/tmp/some-project')
@@ -125,8 +182,8 @@ describe('install (plan §17.6)', () => {
 })
 
 describe('uninstall (plan §17.6)', () => {
-  it('removes only owned entries and leaves user config intact', () => {
-    // Seed user config, then install, then uninstall.
+  it('removes only our entry and leaves the rest of the config intact', () => {
+    // Seed user config (incl. an unrelated plugin + mcp), then install + uninstall.
     writeFileSync(
       configPath(),
       JSON.stringify(
@@ -146,18 +203,47 @@ describe('uninstall (plan §17.6)', () => {
     expect(config.mcp).toEqual({ some: 'server' })
     // Our plugin removed; the user's plugin remains.
     expect(config.plugin).toEqual(['user/their-plugin'])
-    // Ownership marker gone.
-    expect(OWNERSHIP_KEY in config).toBe(false)
   })
 
-  it('round-trips a fresh install back to no config keys we added', () => {
+  it('drops the plugin key when it created an array that is now empty', () => {
     install({ configDir })
     uninstall({ configDir })
 
     const config = readConfig()
-    // The plugin array we created (now empty) is dropped, marker removed.
+    // The plugin array we created (now empty) is dropped.
     expect('plugin' in config).toBe(false)
-    expect(OWNERSHIP_KEY in config).toBe(false)
+  })
+
+  it('preserves non-string entries: removes only the owned string entry', () => {
+    writeFileSync(
+      configPath(),
+      JSON.stringify({ plugin: [['opencode-bar', { key: 'val' }], 'user/keep'] }, null, 2),
+    )
+    install({ configDir })
+    uninstall({ configDir })
+
+    // The tuple entry and the unrelated user string both remain; only ours went.
+    expect(readConfig().plugin).toEqual([['opencode-bar', { key: 'val' }], 'user/keep'])
+  })
+
+  it('round-trips an array of only non-string entries (plugin key survives)', () => {
+    const userPlugin = [{ path: './local-plugin.ts' }]
+    writeFileSync(configPath(), JSON.stringify({ plugin: userPlugin }, null, 2))
+
+    install({ configDir })
+    expect(readConfig().plugin).toEqual([{ path: './local-plugin.ts' }, NARU_PLUGIN_SPECIFIER])
+
+    uninstall({ configDir })
+    // Only our string entry removed; the user's object entry (and the key) survive.
+    expect(readConfig().plugin).toEqual(userPlugin)
+  })
+
+  it('honors a specifier override on uninstall (matches install)', () => {
+    const local = '/abs/path/to/opencode-plugin.ts'
+    install({ configDir, specifier: local })
+    const result = uninstall({ configDir, specifier: local })
+    expect(result.changed).toBe(true)
+    expect('plugin' in readConfig()).toBe(false)
   })
 
   it('is a no-op on a clean dir (no file)', () => {
@@ -168,7 +254,7 @@ describe('uninstall (plan §17.6)', () => {
     expect(configExists()).toBe(false)
   })
 
-  it('is a no-op when config exists but has no Naru ownership marker', () => {
+  it('is a no-op when config exists but does not contain our specifier', () => {
     writeFileSync(configPath(), JSON.stringify({ theme: 'dark', plugin: ['user/x'] }, null, 2))
     const result = uninstall({ configDir })
     expect(result.changed).toBe(false)
@@ -198,90 +284,5 @@ describe('uninstall (plan §17.6)', () => {
 
     // Config unchanged on disk.
     expect(readConfig()).toEqual(before)
-  })
-})
-
-describe('non-string (tuple/object-form) plugin entries are preserved (plan §17.6)', () => {
-  it('install preserves a user tuple-form plugin entry and its options', () => {
-    // OpenCode's `plugin` schema allows the tuple form `[name, options]` and
-    // object entries; install must not drop them.
-    writeFileSync(
-      configPath(),
-      JSON.stringify(
-        { plugin: ['user/x', ['opencode-bar', { key: 'val' }], { name: 'obj', opts: { a: 1 } }] },
-        null,
-        2,
-      ),
-    )
-
-    install({ configDir })
-
-    const config = readConfig()
-    // Every original entry (string, tuple, object) is preserved IN PLACE; ours
-    // is appended at the end.
-    expect(config.plugin).toEqual([
-      'user/x',
-      ['opencode-bar', { key: 'val' }],
-      { name: 'obj', opts: { a: 1 } },
-      NARU_PLUGIN_ID,
-    ])
-    // We only own our own entry.
-    expect((config[OWNERSHIP_KEY] as { plugins: string[] }).plugins).toEqual([NARU_PLUGIN_ID])
-  })
-
-  it('install→uninstall round-trip preserves an array of only non-string entries', () => {
-    // Worst case: a user with ONLY a local object plugin. The plugin key must
-    // survive the round-trip (never wiped because a string-filtered view was
-    // empty).
-    const userPlugin = [{ path: './local-plugin.ts' }]
-    writeFileSync(configPath(), JSON.stringify({ plugin: userPlugin }, null, 2))
-
-    install({ configDir })
-    // After install: user object entry preserved, ours appended.
-    expect(readConfig().plugin).toEqual([{ path: './local-plugin.ts' }, NARU_PLUGIN_ID])
-
-    uninstall({ configDir })
-    // After uninstall: ONLY our string entry removed; the user's object entry
-    // (and thus the `plugin` key) survives intact.
-    const config = readConfig()
-    expect(config.plugin).toEqual(userPlugin)
-    expect(OWNERSHIP_KEY in config).toBe(false)
-  })
-
-  it('uninstall removes only the owned STRING entry and keeps tuple/object entries', () => {
-    writeFileSync(
-      configPath(),
-      JSON.stringify({ plugin: [['opencode-bar', { key: 'val' }], 'user/keep'] }, null, 2),
-    )
-    install({ configDir })
-    uninstall({ configDir })
-
-    const config = readConfig()
-    // The tuple entry and the unrelated user string both remain; only ours went.
-    expect(config.plugin).toEqual([['opencode-bar', { key: 'val' }], 'user/keep'])
-  })
-})
-
-describe('ownership is surgical: install never claims a pre-existing user entry (plan §17.6)', () => {
-  it('does NOT own (and uninstall does NOT remove) our id when the user placed it and install added nothing', () => {
-    // The user manually added our id alongside their own, with no marker.
-    writeFileSync(
-      configPath(),
-      JSON.stringify({ plugin: [NARU_PLUGIN_ID, 'user/keep-me'] }, null, 2),
-    )
-
-    const result = install({ configDir })
-    // Install added nothing to the array (id already present); it must NOT
-    // record an ownership marker that would make uninstall remove a user entry.
-    expect(result.changes.some((c) => c.kind === 'add-plugin')).toBe(false)
-    expect(result.changes.some((c) => c.kind === 'add-ownership-marker')).toBe(false)
-    const afterInstall = readConfig()
-    expect(OWNERSHIP_KEY in afterInstall).toBe(false)
-
-    // Uninstall is a no-op (no marker => nothing of ours to remove); the
-    // user-placed Naru entry survives.
-    const un = uninstall({ configDir })
-    expect(un.changed).toBe(false)
-    expect(readConfig().plugin).toEqual([NARU_PLUGIN_ID, 'user/keep-me'])
   })
 })

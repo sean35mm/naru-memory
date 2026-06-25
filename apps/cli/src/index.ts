@@ -961,14 +961,15 @@ function buildProgram(ctx: OutputContext): Command {
   // config file — it opens no DB — so these commands call the installer
   // directly instead of `withClient`. `--config-dir` overrides the managed
   // dir (tests pass a temp dir; never a real ~/.config) and `--dry-run`
-  // computes the plan without writing. Ownership markers keep uninstall
-  // surgical and MCP is never enabled (§17.2/§17.6).
+  // computes the plan without writing. The registered plugin specifier is its
+  // own ownership marker, so uninstall removes only that exact entry and MCP
+  // is never enabled (§17.2/§17.6).
   const opencode = withGlobalOptions(program.command('opencode')).description(
     'manage the OpenCode adapter integration (plan §17.6)',
   )
 
   withGlobalOptions(opencode.command('install'))
-    .description('register the Naru plugin in OpenCode config (ownership-marked, no MCP)')
+    .description('register the Naru plugin specifier in OpenCode config (no MCP)')
     .option('--config-dir <path>', 'OpenCode config dir to manage (default: user config dir)')
     .option('--project-dir <path>', 'project dir to associate (reserved; recorded only)')
     .option('--dry-run', 'compute the planned changes without writing')
@@ -984,7 +985,7 @@ function buildProgram(ctx: OutputContext): Command {
     })
 
   withGlobalOptions(opencode.command('uninstall'))
-    .description('remove only Naru-owned entries from OpenCode config')
+    .description('remove only the Naru plugin specifier from OpenCode config')
     .option('--config-dir <path>', 'OpenCode config dir to manage (default: user config dir)')
     .option('--dry-run', 'compute the planned changes without writing')
     .action(async (cmdOpts, command: Command) => {

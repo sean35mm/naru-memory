@@ -9,7 +9,7 @@
   },
   "scripts": {
     "bench": "tsx scripts/bench.ts",
-    "build": "pnpm --filter naru-memory build",
+    "build": "pnpm --filter @narulabs/naru build",
     "demo": "tsx examples/walkthrough.ts",
     "format": "biome format --write .",
     "lint": "biome check .",

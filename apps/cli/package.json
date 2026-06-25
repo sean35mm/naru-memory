@@ -1,8 +1,11 @@
 {
-  "name": "naru-memory",
+  "name": "@narulabs/naru",
   "version": "0.1.0",
   "description": "Local-first, harness-agnostic memory for AI agents and developer workflows",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/sean35mm/naru-memory#readme",
   "repository": {
     "type": "git",
@@ -14,6 +17,10 @@
   "type": "module",
   "bin": {
     "naru": "./dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./opencode": "./dist/opencode.js"
   },
   "files": ["dist", "LICENSE", "README.md"],
   "engines": {
@@ -39,6 +46,15 @@
     "@naru/opencode-adapter": "workspace:*",
     "@naru/schema": "workspace:*",
     "@naru/server": "workspace:*",
+    "@opencode-ai/plugin": "^1.4.9",
     "tsup": "^8.0.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": {
+      "optional": true
+    }
   }
 }

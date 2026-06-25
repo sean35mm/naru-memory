@@ -1,9 +1,9 @@
-# naru-memory
+# @narulabs/naru
 
 Local-first, harness-agnostic **memory for AI agents and developer workflows** — durable, scoped, evidence-backed facts with hybrid retrieval and no hosted dependency by default. Installs a `naru` command.
 
 ```bash
-npm install -g naru-memory     # or: npx naru-memory --help
+npm install -g @narulabs/naru     # or: npx @narulabs/naru --help
 naru init
 naru add "User prefers pnpm workspaces" --scope project:my-app
 naru search "pnpm" --scope project:my-app

@@ -7,12 +7,12 @@ Local-first, harness-agnostic **memory for AI agents and developer workflows**. 
 ## Install
 
 ```bash
-npm install -g naru-memory     # or: pnpm add -g naru-memory
+npm install -g @narulabs/naru     # or: pnpm add -g @narulabs/naru
 # or run without installing:
-npx naru-memory --help
+npx @narulabs/naru --help
 ```
 
-The package is `naru-memory`; it installs a `naru` command. Requires Node.js >= 22. The only native dependency is `better-sqlite3` (ships prebuilt binaries).
+The package is `@narulabs/naru`; it installs a `naru` command. Requires Node.js >= 22. The only native dependency is `better-sqlite3` (ships prebuilt binaries).
 
 ## Quickstart
 
