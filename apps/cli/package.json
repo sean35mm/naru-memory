@@ -1,6 +1,6 @@
 {
   "name": "@narulabs/naru",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first, harness-agnostic memory for AI agents and developer workflows",
   "license": "MIT",
   "publishConfig": {
@@ -13,7 +13,15 @@
     "directory": "apps/cli"
   },
   "bugs": "https://github.com/sean35mm/naru-memory/issues",
-  "keywords": ["memory", "ai", "agents", "local-first", "sqlite", "rag", "opencode"],
+  "keywords": [
+    "memory",
+    "ai",
+    "agents",
+    "local-first",
+    "sqlite",
+    "rag",
+    "opencode"
+  ],
   "type": "module",
   "bin": {
     "naru": "./dist/index.js"
@@ -23,7 +31,11 @@
     "./opencode": "./dist/opencode.js",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "engines": {
     "node": ">=22"
   },
