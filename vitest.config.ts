@@ -10,6 +10,8 @@ export default defineConfig({
       '@naru/store-sqlite': src('./packages/store-sqlite/src/index.ts'),
       '@naru/core': src('./packages/core/src/index.ts'),
       '@naru/api': src('./packages/api/src/index.ts'),
+      '@naru/opencode-adapter/installer': src('./packages/opencode-adapter/src/installer.ts'),
+      '@naru/opencode-adapter/plugin': src('./packages/opencode-adapter/src/opencode-plugin.ts'),
       '@naru/opencode-adapter': src('./packages/opencode-adapter/src/index.ts'),
       '@naru/server': src('./apps/server/src/index.ts'),
     },

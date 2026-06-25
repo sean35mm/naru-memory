@@ -9,10 +9,10 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "naru-server": "./src/index.ts"
+    "naru-server": "./src/bin.ts"
   },
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/bin.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

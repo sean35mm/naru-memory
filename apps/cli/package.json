@@ -1,6 +1,6 @@
 {
   "name": "@narulabs/naru",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first, harness-agnostic memory for AI agents and developer workflows",
   "license": "MIT",
   "publishConfig": {

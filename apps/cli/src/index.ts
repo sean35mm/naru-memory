@@ -13,11 +13,15 @@ import {
   type WritableScopeSelector,
   resolveConfig,
 } from '@naru/core'
+// Import the installer from its dedicated subpath (NOT the package barrel): the
+// barrel re-exports the OpenCode plugin, which statically imports
+// `@opencode-ai/plugin` (an OPTIONAL peer). Pulling that into the CLI bundle
+// makes `naru` crash for normal users who don't have OpenCode installed.
 import {
   type InstallerResult,
   install as installAdapter,
   uninstall as uninstallAdapter,
-} from '@naru/opencode-adapter'
+} from '@naru/opencode-adapter/installer'
 import type { FactStatus, ScopeType } from '@naru/schema'
 import { FACT_STATUSES, SCOPE_TYPES } from '@naru/schema'
 import { createServer, readServerFile, serverFilePath } from '@naru/server'
