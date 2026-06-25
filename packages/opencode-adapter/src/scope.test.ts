@@ -1,4 +1,3 @@
-import { basename } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { type GitRunner, projectKeyFromRemote, resolveScopes } from './scope'
 
@@ -78,12 +77,15 @@ describe('resolveScopes (plan §17.5)', () => {
     expect(scopes.user.key.length).toBeGreaterThan(0)
   })
 
-  it('resolves against the real (non-git) repo cwd without throwing', () => {
-    // naru-memory itself is not a git repo, so the DEFAULT runner must degrade
-    // to the cwd basename and a null branch rather than throwing (plan §17.5).
-    const scopes = resolveScopes({ cwd: process.cwd() })
-    expect(scopes.project.key).toBe(basename(process.cwd()))
-    expect(scopes.workspace.key).toBe(process.cwd())
+  it('falls back to the cwd basename + null branch when not in a git repo', () => {
+    // With no remote / topLevel / branch (a non-git cwd), project resolves to
+    // the cwd basename and branch is null rather than throwing (plan §17.5).
+    // Uses an injected non-git runner so the result is deterministic and does
+    // not depend on whether the test host's cwd happens to be a git repo.
+    const scopes = resolveScopes({ cwd: '/some/where/my-app' }, fakeGit())
+    expect(scopes.project.key).toBe('my-app')
+    expect(scopes.workspace.key).toBe('/some/where/my-app')
+    expect(scopes.branch).toBeNull()
   })
 })
 
