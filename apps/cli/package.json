@@ -1,6 +1,6 @@
 {
   "name": "@narulabs/naru",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local-first, harness-agnostic memory for AI agents and developer workflows",
   "license": "MIT",
   "publishConfig": {
@@ -20,7 +20,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./opencode": "./dist/opencode.js"
+    "./opencode": "./dist/opencode.js",
+    "./package.json": "./package.json"
   },
   "files": ["dist", "LICENSE", "README.md"],
   "engines": {
