@@ -1,9 +1,11 @@
 name: CI
 
+# PR gate. Pushes to `main` are gated by release.yml (which also publishes), so
+# CI runs on pull requests (and any non-main branch push) to avoid double runs.
 on:
-  push:
-    branches: [main, master]
   pull_request:
+  push:
+    branches-ignore: [main]
 
 jobs:
   verify:

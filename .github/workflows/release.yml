@@ -1,0 +1,63 @@
+name: Release
+
+# On every push to main, Changesets either:
+#   - opens/updates a "Version Packages" PR (when there are pending changesets), or
+#   - publishes (when that PR was just merged, so no changesets remain) — creating
+#     git tags + GitHub Releases and pushing to npm.
+# Your only routine action: merge the "Version Packages" PR when you want to ship.
+on:
+  push:
+    branches: [main]
+
+# Avoid overlapping release runs racing on tags/the release PR.
+concurrency: release-${{ github.ref }}
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create tags + GitHub Releases, push the version PR
+      pull-requests: write # open/update the "Version Packages" PR
+      id-token: write # OIDC: npm Trusted Publishing + provenance (no NPM_TOKEN)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Never publish a broken artifact: full gate incl. the packaged-bin smoke.
+      - name: Verify (typecheck + test + lint + build + pack-smoke)
+        run: pnpm -r typecheck && pnpm test && pnpm lint && pnpm build && pnpm pack-smoke
+
+      # OIDC Trusted Publishing requires npm >= 11.5 (Node 22 ships npm 10.x).
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest && npm --version
+
+      - name: Create Release PR or publish to npm
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          version: pnpm changeset version
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Provenance ties the npm package to this exact workflow run (supply-chain
+          # transparency). Works with OIDC trusted publishing — no token needed.
+          NPM_CONFIG_PROVENANCE: "true"
+          # FALLBACK (only if OIDC isn't set up on npm): create a granular
+          # automation token with "bypass 2FA", add it as the repo secret
+          # NPM_TOKEN, and uncomment the next line.
+          # NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
