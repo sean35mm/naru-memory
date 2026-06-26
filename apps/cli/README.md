@@ -1,16 +1,42 @@
-# @narulabs/naru
+# 🧠 @narulabs/naru
 
-Local-first, harness-agnostic **memory for AI agents and developer workflows** — durable, scoped, evidence-backed facts with hybrid retrieval and no hosted dependency by default. Installs a `naru` command.
+**A local-first memory layer for AI agents and developer workflows.** Naru captures durable facts from your work and feeds the right ones back — to your agent or your own tools — on demand. Everything lives in a single SQLite file on your machine: **private, inspectable, and portable**, with no hosted service required. Installs a `naru` command.
 
 ```bash
-npm install -g @narulabs/naru     # or: npx @narulabs/naru --help
+npm install -g @narulabs/naru      # or: npx @narulabs/naru <command>
+
 naru init
-naru add "User prefers pnpm workspaces" --scope project:my-app
-naru search "pnpm" --scope project:my-app
+naru add "We use pnpm workspaces and Vitest" --scope project:my-app
+naru search "test runner" --scope project:my-app
 ```
 
-Requires Node.js >= 22 (only native dep is `better-sqlite3`, which ships prebuilt binaries). Add `--json` to any command for machine-readable output.
+Requires **Node.js ≥ 22**. Add `--json` to any command for machine-readable output.
 
-Highlights: scoped + privacy-aware (secrets/PII redacted before storage), hybrid FTS/vector retrieval, non-destructive supersession, portable `export`/`import`/`backup`, a secured local `naru serve` tRPC API, and an OpenCode adapter (`naru opencode install`). LLM extraction and vectors are optional (any OpenAI-compatible endpoint).
+## Why
 
-See the [project README](https://github.com/sean35mm/naru-memory#readme) for full docs. License: MIT.
+AI agents forget everything between sessions. Naru gives them long-term memory that **you own** — local, private, and queryable.
+
+- 🏠 **Local-first & private** — one SQLite file, works offline; secrets/PII redacted before storage.
+- 🎯 **Scoped** — `user` / `project` / `branch` / `session` / … with scope-safe retrieval (no cross-project leaks).
+- 🔎 **Hybrid retrieval** — keywords + semantic vectors + entity + recency, with prompt-ready context blocks.
+- 🕰️ **Non-destructive** — changed facts *supersede* old ones; history is preserved.
+- 📦 **Portable** — export/import bundles, integrity check + repair, a secured local `naru serve` API, and an OpenCode plugin.
+
+LLM extraction and vector search are optional — point Naru at any OpenAI-compatible endpoint (e.g. Ollama) to enable them; otherwise it runs fully offline.
+
+## Common commands
+
+| Command | Purpose |
+|---|---|
+| `naru init` | Initialize the local DB + default scopes |
+| `naru add` · `naru capture` | Add a fact · extract facts from text (LLM) |
+| `naru search` · `naru context` | Hybrid search · prompt-ready context block |
+| `naru export` · `naru import` · `naru backup` | Portability |
+| `naru serve` | Secured local tRPC server |
+| `naru opencode install` | Install the OpenCode plugin |
+
+**Status: alpha (`0.x`)** — APIs may change before `1.0`.
+
+📖 Full docs, concepts, and architecture: **https://github.com/sean35mm/naru-memory**
+
+MIT © Naru Memory authors
